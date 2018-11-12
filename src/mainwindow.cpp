@@ -50,6 +50,7 @@
 #include <QScreen>
 #include "dtkwidget_global.h"
 #include "dwidgetutil.h"
+#include "constvalue.h"
 
 #define  SLEEPSS          2000
 #define  TDSTATUS         6
@@ -1255,6 +1256,10 @@ void MainWindow::AppendDownUrl( QString urlStr ,QString SavePath ){
 
 
    QString ID = downDB->AppendDTask(  urlStr );  //添加数据库记录
+   if(ID==ALREADY_IN_DOWNLOADING){
+   //TODO if already in downloading,just skip it ?
+       return;
+   }
    aria2c->SendMsgAria2c_addUri( urlStr ,ID  );
    //2018-1-2 新建任务开始下载不需要系统通知
    //ShowMessageTip( "Join a new task：" + urlStr  );

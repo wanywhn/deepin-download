@@ -1,4 +1,5 @@
 #include "sqlitefunt.h"
+#include "constvalue.h"
 
 #include <QDebug>
 
@@ -292,13 +293,27 @@ QString SQLiteFunt::AppendDTask( QString url ,QString classn ){
 
     QSqlQuery query( m_dbconn );
 
-    QString sql ="insert into downlist ( url ,gid,type,classn) values( '"+ url +"','0',0,"+ classn +")";
+    //TODO in downloading or already in the history
+    QString sql="SELECT COUNT(*) FROM downlist WHERE url=:url ";//AND type=???????";
+    query.prepare(sql);
+    query.bindValue(":url",url);
+    if(!query.exec()){
+        qDebug() << "LastQuery:"<<query.lastQuery()<<" Error:"<<query.lastError();
+    }
+    if(query.next()){
+        if(query.value(0).toInt()!=0){
+            return ALREADY_IN_DOWNLOADING;
+        }
+    }
 
-    qDebug() << sql;
+    sql ="insert into downlist ( url ,gid,type,classn) values(':url', '0',0,:classn)";
+//    QString sql ="insert into downlist ( url ,gid,type,classn) values( '"+ url +"','0',0,"+ classn +")";
 
-    if ( ! query.exec( sql ) ){
-
-        qDebug() << "Error : " << sql;
+    query.prepare(sql);
+    query.bindValue(":url",url);
+    query.bindValue(":classn",classn);
+    if ( ! query.exec() ){
+        qDebug() << "LastQuery:"<<query.lastQuery()<<" Error:"<<query.lastError();
     }
 
     sql = "SELECT last_insert_rowid()";

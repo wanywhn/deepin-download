@@ -25,9 +25,9 @@ NewDown::NewDown( MainWindow *mainUI ,QWidget *parent) :Dtk::Widget::DDialog(par
     QWidget *form = new QWidget;
     QVBoxLayout  *vbLayout = new QVBoxLayout;
     form->setLayout( vbLayout );
-    Edit1 = new QTextEdit;
-    Edit1->setFixedHeight( 180 );
-    Edit1->setStyleSheet("QTextEdit{border:1px solid #f3f3f3;}");
+    editorUrl = new QTextEdit;
+    editorUrl->setFixedHeight( 180 );
+    editorUrl->setStyleSheet("QTextEdit{border:1px solid #f3f3f3;}");
 
 
     QPushButton *openFileDlg = new QPushButton( QIcon( ":Resources/images/torrent.svg" ), "torrent　|　metalink　Down file" );
@@ -73,14 +73,14 @@ NewDown::NewDown( MainWindow *mainUI ,QWidget *parent) :Dtk::Widget::DDialog(par
     pa.setColor(QPalette::WindowText,Qt::red);
     errormsg->setPalette(pa);
 
-    vbLayout->addWidget( Edit1 );    
+    vbLayout->addWidget( editorUrl );
     vbLayout->addWidget( openFileDlg );
     vbLayout->addWidget( errormsg );
     vbLayout->addWidget( SaveSetup );
 
     msg = new QLabel;
     msg->setText("");
-    msg->setVisible( false );
+    msg->setVisible(false);
 
 
     addContent( form );
@@ -166,7 +166,7 @@ bool NewDown::checkDir( QString path ){
 
         this->SavePath = path;
 
-        if( selSavePath->findText(   path ) == -1 ){
+        if( selSavePath->findData(path ) == -1 ){
 
             selSavePath->addItem( QIcon( ":Resources/images/folder-desktop.svg" ),path,path  );
             selSavePath->setCurrentIndex( selSavePath->count() -1 );
@@ -182,8 +182,9 @@ bool NewDown::checkDir( QString path ){
 
         this->SavePath = "";
     }
-    file.close();
-    QFile::remove( path + "/testcreate.gc" );
+    /// remove will close the file if opened
+    file.remove();
+    return true;
 }
 
 
@@ -216,7 +217,7 @@ void NewDown::Button1Click(){
 
     qDebug() <<"Button1Click";
 
-    this->Edit1->setText("");
+    this->editorUrl->setText("");
     this->msg->setText( "" );
     this->errormsg->setText( "" );
     this->close();
@@ -225,7 +226,7 @@ void NewDown::Button1Click(){
 
 int NewDown::Button2Click(){
 
-   QString urlStrs =  Edit1->toPlainText();
+   QString urlStrs =  editorUrl->toPlainText();
 
    if ( this->SavePath == "" ){
 
@@ -233,91 +234,88 @@ int NewDown::Button2Click(){
        return -1;
    }
 
-   if ( urlStrs.trimmed().length() != 0  ){
-
-       qDebug() << "Button2Click: GetEdit1 :"  << urlStrs;
-
-       if( dtype != 0  ){
-
-           switch ( dtype ) {
-
-               case 1:
-
-                   mainUI->AppendDownMetalink( this->dPath ,this->SavePath );
-                   break;
-
-               case 2:
-
-                   mainUI->AppendDownBT( this->dPath ,this->SavePath );
-                   break;
-
-               //default:
-               //    break;
-           }
-
-
-       }else{
-
-         QStringList urlStrList =  urlStrs.split("\n");
-
-         foreach ( QString url ,  urlStrList) {
-
-              qDebug() << "url :"  << url;
-
-              if ( url.left( 7 ) == "thunder" ){
-
-                  url = GetThunderUrl( url );
-                  //QMessageBox::information( NULL, "",   url );
-                  if( url == "" ){
-                      //【您输入的地址不能被正确解析，请重试！】【The address cannot be analyzed, please retry!】
-                      this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
-                      return -1;
-                  }
-              }
-
-              //ed2k://
-              if ( url.left( 4 ) == "ed2k" ){
-
-                //【您输入的地址不能被正确解析，请重试！】【The address cannot be analyzed, please retry!】
-                this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
-                return -1;
-              }
-
-              if ( url.trimmed() != ""  ){
-
-                  if ( existUrl( url.trimmed() ) ){
-
-                      mainUI->AppendDownUrl( url ,this->SavePath );
-                  }else{
-
-                      this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
-                      return -1;
-                  }
-
-
-              }
-          }
-       }
-       this->Edit1->setText("");
-       this->msg->setText( "" );
-       this->close();
-
-       return 0;
-
-   }else{
+   if ( urlStrs.trimmed().length() == 0  ){
 
        errormsg->setText( "Download address download address can not be empty..." );
 
        return -2;
    }
+   qDebug() << "Button2Click: GetEdit1 :"  << urlStrs;
+
+   if( dtype != 0  ){
+
+       switch ( dtype ) {
+
+       case 1:
+
+           mainUI->AppendDownMetalink( this->dPath ,this->SavePath );
+           break;
+
+       case 2:
+
+           mainUI->AppendDownBT( this->dPath ,this->SavePath );
+           break;
+
+           //default:
+           //    break;
+       }
 
 
-   Edit1->setText("");
+   }else{
+
+       QStringList urlStrList =  urlStrs.split("\n");
+
+       foreach ( QString url ,  urlStrList) {
+
+           qDebug() << "url :"  << url;
+
+           if ( url.left( 7 ) == "thunder" ){
+
+               url = GetThunderUrl( url );
+               //QMessageBox::information( NULL, "",   url );
+               if( url == "" ){
+                   //【您输入的地址不能被正确解析，请重试！】【The address cannot be analyzed, please retry!】
+                   this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
+                   return -1;
+               }
+           }
+
+           //ed2k://
+           if ( url.left( 4 ) == "ed2k" ){
+
+               //【您输入的地址不能被正确解析，请重试！】【The address cannot be analyzed, please retry!】
+               this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
+               return -1;
+           }
+
+           if ( url.trimmed() == ""  ){
+               continue;
+           }
+
+               if ( existUrl( url.trimmed() ) ){
+
+                   mainUI->AppendDownUrl( url ,this->SavePath );
+               }else{
+
+                   this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
+                   return -1;
+           }
+       }
+   }
+   this->editorUrl->setText("");
+   this->msg->setText( "" );
+   this->close();
+
+   return 0;
+
+
+
+   //   Edit1->setText("");
 }
 
 void NewDown::ClearEdit(){
 
-    this->Edit1->setText("");
+    this->editorUrl->setText("");
     msg->setText("");
     errormsg->setText("");
 }
@@ -325,7 +323,7 @@ void NewDown::ClearEdit(){
 
 void NewDown::SetDownloadEdit( QString urlStr ){
 
-    this->Edit1->setText( urlStr );
+    this->editorUrl->setText( urlStr );
 }
 
 void NewDown::Button3Click(){
@@ -351,7 +349,7 @@ void NewDown::openFileDlg(){
         }else{
 
             this->dPath = path;
-            this->Edit1->setText( path );
+            this->editorUrl->setText( path );
 
             if ( zName == ".torrent"  )  dtype = 1 ;
             if ( zName == ".metalink" )  dtype = 2 ;
@@ -366,7 +364,7 @@ QString NewDown::GetThunderUrl(  QString thunder_url ){
     //迅雷链接
     //thunder://QUFodHRwOi8vdG9vbC5sdS90ZXN0LnppcFpa
     //QString thunder_url = "thunder://QUFodHRwOi8vdG9vbC5sdS90ZXN0LnppcFpa";
-    qDebug() << "thunder_url" << thunder_url;
+    qDebug() << "thunder_url:" << thunder_url;
 
     QString _url = "";
     try{
@@ -378,7 +376,7 @@ QString NewDown::GetThunderUrl(  QString thunder_url ){
     }
 
 
-    qDebug() << "thunder_url" << _url   ;
+    qDebug() << "thunder_url:" << _url   ;
     QString urlStr = "";
     if ( _url.left(2) == "AA" && _url.right(2) == "ZZ"  ){
 

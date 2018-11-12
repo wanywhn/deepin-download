@@ -25,7 +25,7 @@ private:
     bool checkDir( QString path );
     void SelectSaveDir();
     MainWindow  *mainUI;
-    QTextEdit   *Edit1;
+    QTextEdit   *editorUrl;
     QLabel      *errormsg;
     QLabel      *msg;
     QComboBox   *selSavePath;

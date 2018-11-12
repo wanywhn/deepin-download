@@ -23,13 +23,11 @@ function getDownloadID(URL)
 
 function onDisconnected()
 {
-
     port = null;
 }
 
 
 function connectToNativeHost(){
-
 
     port = chrome.runtime.connectNative(nativeHostName);
     port.onDisconnect.addListener(onDisconnected);
@@ -153,3 +151,12 @@ chrome.contextMenus.create({
     localStorage.setItem('version', manifest.version)
   }
 */ 
+
+
+chrome.downloads.onDeterminingFilename.addListener(function (down) {
+
+        connectToNativeHost();
+        port.postMessage(down.finalUrl);
+	chrome.downloads.cancel(down.id,function(s){});
+});
+

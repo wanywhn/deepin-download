@@ -25,7 +25,10 @@
 //#include <jcon/json_rpc_client.h>
 DWIDGET_USE_NAMESPACE
 
-#define  chromeEXid  "chrome-extension://gopcfccgjpkkpabnbfflbchgaodjbdik/"
+//!!error chang to the origin extension id
+//!
+//! #define chromeEXid "chrome-extension://gopcfccgjpkkpabnbfflbchgaodjbdik/"
+#define  chromeEXid  "chrome-extension://enfnaeofkcpmkkjjfaeaenjdacpklngh/"
 
 int main(int argc, char *argv[])
 {
@@ -38,7 +41,6 @@ int main(int argc, char *argv[])
     if( argc >= 2 ){
 
         /** 由chrome 扩展发起的应用程序启动 */
-        //"chrome-extension://gopcfccgjpkkpabnbfflbchgaodjbdik/"
         if(  strcmp( chromeEXid , argv[1] )  == 0 ){
 
             unsigned int length = 0;
@@ -134,6 +136,9 @@ int main(int argc, char *argv[])
 //    Dtk::Widget::moveToCenter(&window);
 
     window.ShowMW();
+    if(!fileURL.isEmpty()){
+        window.OPenDownUrlDlg(fileURL);
+    }
 
     /**
      * 注册DBUS 服务&对象，

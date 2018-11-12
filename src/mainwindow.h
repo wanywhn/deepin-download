@@ -62,7 +62,7 @@ class GCThread;
 /** */
 #include "dwaterprogress.h"
 #include "dtkwidget_global.h"
-#include "dwidget.h"
+#include <DtkWidgets>
 #include "dstandardpaths.h"
 
 
@@ -215,6 +215,7 @@ signals:
      //void start();
      void HandSort( int col );
 
+     //TODO pause in background
 /**  定时轮循 信号触发*/
 private slots:
 
