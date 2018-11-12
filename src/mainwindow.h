@@ -62,7 +62,7 @@ class GCThread;
 /** */
 #include "dwaterprogress.h"
 #include "dtkwidget_global.h"
-#include "dwidget.h"
+#include <DtkWidgets>
 #include "dstandardpaths.h"
 
 

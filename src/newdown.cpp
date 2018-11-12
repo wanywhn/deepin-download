@@ -166,7 +166,7 @@ bool NewDown::checkDir( QString path ){
 
         this->SavePath = path;
 
-        if( selSavePath->findText(   path ) == -1 ){
+        if( selSavePath->findData(path ) == -1 ){
 
             selSavePath->addItem( QIcon( ":Resources/images/folder-desktop.svg" ),path,path  );
             selSavePath->setCurrentIndex( selSavePath->count() -1 );
@@ -182,8 +182,9 @@ bool NewDown::checkDir( QString path ){
 
         this->SavePath = "";
     }
-    file.close();
-    QFile::remove( path + "/testcreate.gc" );
+    /// remove will close the file if opened
+    file.remove();
+    return true;
 }
 
 
