@@ -121,6 +121,8 @@ private:
 
     QList<TBItem>   dlist;
 
+    //TODO remove deleted and didn't updated item
+    QHash<QString,int> gid2RowIndexHash;
     /** 控件、窗口、对话框 */
     NewDown          *newDownDlg;
     ConfigDlg        *configDlg;
@@ -203,13 +205,14 @@ public:
     int GetSlideSelRow();
 
     void StartRun( QString DownFileUrl );
-    void OPenDownUrlDlg( QString DownFileUrl );
+    void OpenDownUrlDlg(QString DownFileUrl);
 
 /** RPC 消息返回处理 */
 public:
     void UpdateGUI_StatusMsg( TBItem tbitem );
     void UpdateGUI_StatusMsg(  QList<TBItem>  tbList );
     void UpdateGUI_CommandMsg( QJsonObject nObj );
+
 
 signals:
      //void start();
@@ -235,9 +238,13 @@ private slots:
     void OnNetworkReply( QList<TBItem*> *tbList );
     void OnNetworkReplyNode( TBItem* tbitem );
 
+
+    void OnApplicationStateChanged(Qt::ApplicationState state);
+
 private:
 
 
+    void updateOrInsertIntoDownListView(const TBItem *tbitem);
 };
 
 #endif // MAINWINDOW_H

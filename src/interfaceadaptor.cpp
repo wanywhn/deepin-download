@@ -15,7 +15,7 @@ InterfaceAdaptor::~InterfaceAdaptor(){
 
 void InterfaceAdaptor::ShowDownWindow(  QString fileURL ){
 
-    MainWindow *mainUI = (MainWindow*)qobject_cast<QWidget*>(parent());
+    auto *mainUI = (MainWindow*)qobject_cast<QWidget*>(parent());
     mainUI->activateWindow();
     mainUI->raise();
 
@@ -23,7 +23,7 @@ void InterfaceAdaptor::ShowDownWindow(  QString fileURL ){
     if( fileURL != "" ){
 
 
-      mainUI->OPenDownUrlDlg( fileURL );
+        mainUI->OpenDownUrlDlg(fileURL);
 
     }else{
 

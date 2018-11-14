@@ -119,7 +119,7 @@ DDRecord SQLiteFunt::GetDTaskInfo( QString gid ){
        t.id = query.value(0).toInt();
        t.url  = query.value(1).toString();
        t.gid = query.value(2).toString();
-       t.type = query.value(3).toInt();
+       t.type = static_cast<TaskStatus>(query.value(3).toInt());
        t.classn = query.value(4).toInt();
        t.dtime = query.value(5).toString();
        t.savepath = query.value(6).toString();
@@ -151,14 +151,15 @@ QList<DDRecord> SQLiteFunt::ReadDDTask( int type ){
        t.id = query.value(0).toInt();
        t.url  = query.value(1).toString();
        t.gid = query.value(2).toString();
-       t.type = query.value(3).toInt();
+       t.type = static_cast<TaskStatus>(query.value(3).toInt());
        t.classn = query.value(4).toInt();
        t.dtime = query.value(5).toString();
        t.savepath = query.value(6).toString();
 
-       if( t.type != 1  ){
-           t.url  = t.savepath;
-       }
+       //TODO ???
+//       if( t.type != 1  ){
+//           t.url  = t.savepath;
+//       }
 
        //qDebug()<< "read " << t.gid;
 
@@ -189,14 +190,15 @@ QList<DDRecord> SQLiteFunt::ReadRecycleList(){
        t.id = query.value(0).toInt();
        t.url  = query.value(1).toString();
        t.gid = query.value(2).toString();
-       t.type = query.value(3).toInt();
+       t.type = static_cast<TaskStatus>(query.value(3).toInt());
        t.classn = query.value(4).toInt();
        t.dtime = query.value(5).toString();
        t.savepath = query.value(6).toString();
 
-       if( t.type != 1   ){
-           t.url  = t.savepath;
-       }
+       //TODO ????
+//       if( t.type != 1   ){
+//           t.url  = t.savepath;
+//       }
 
        //qDebug()<< "read " << t.id + " "+ t.url << " "+ t.gid+ " "+ t.type + "  " + t.classn;
 
@@ -235,14 +237,15 @@ QList<DDRecord> SQLiteFunt::ReadALLTask(){
        t.id = query.value(0).toInt();
        t.url  = query.value(1).toString();
        t.gid = query.value(2).toString();
-       t.type = query.value(3).toInt();
+       t.type = static_cast<TaskStatus>(query.value(3).toInt());
        t.classn = query.value(4).toInt();
        t.dtime = query.value(5).toString();
        t.savepath = query.value(6).toString();
 
-       if( t.type != 1   ){
-           t.url  = t.savepath;
-       }
+       //TODO ???
+//       if( t.type != 1   ){
+//           t.url  = t.savepath;
+//       }
 
        //qDebug()<< "read " << t.id + " "+ t.url << " "+ t.gid+ " "+ t.type + "  " + t.classn;
 
@@ -276,7 +279,7 @@ void SQLiteFunt::SetDTaskStatus( DDRecord d  ){
 
     QSqlQuery query( m_dbconn );
 
-    QString sql ="update downlist set type ="+  QString::number( d.type,10 ) +" where gid='" + d.gid +"'";
+    QString sql ="update downlist set type ="+  QString::number( static_cast<int>(d.type),10 ) +" where gid='" + d.gid +"'";
 
     qDebug() << sql ;
     if ( ! query.exec( sql ) ){
@@ -291,23 +294,12 @@ void SQLiteFunt::SetDTaskStatus( DDRecord d  ){
 */
 QString SQLiteFunt::AppendDTask( QString url ,QString classn ){
 
+    if(findATaskI(url)){
+        return ALREADY_IN_DOWNLOADING;
+    }
+
     QSqlQuery query( m_dbconn );
-
-    //TODO in downloading or already in the history
-    QString sql="SELECT COUNT(*) FROM downlist WHERE url=:url ";//AND type=???????";
-    query.prepare(sql);
-    query.bindValue(":url",url);
-    if(!query.exec()){
-        qDebug() << "LastQuery:"<<query.lastQuery()<<" Error:"<<query.lastError();
-    }
-    if(query.next()){
-        if(query.value(0).toInt()!=0){
-            return ALREADY_IN_DOWNLOADING;
-        }
-    }
-
-    sql ="insert into downlist ( url ,gid,type,classn) values(':url', '0',0,:classn)";
-//    QString sql ="insert into downlist ( url ,gid,type,classn) values( '"+ url +"','0',0,"+ classn +")";
+    QString sql ="insert into downlist ( url ,gid,type,classn) values(:url, '0',0,:classn)";
 
     query.prepare(sql);
     query.bindValue(":url",url);
@@ -336,18 +328,19 @@ QString SQLiteFunt::AppendDTask( QString url ,QString classn ){
 */
 bool SQLiteFunt::findATaskI( QString urlStr ){
 
-    bool x = false;
     QSqlQuery query( m_dbconn );
-    QString sql= "select * from downlist where url ='"+ urlStr +"'";
-
-    query.exec( sql );
-
-    if ( query.next() ){
-
-       x = true;
+    QString sql="SELECT COUNT(*) FROM downlist WHERE url=:url ";//AND type=???????";
+    query.prepare(sql);
+    query.bindValue(":url",urlStr);
+    if(!query.exec()){
+        qDebug() << "LastQuery:"<<query.lastQuery()<<" Error:"<<query.lastError();
     }
-    query.finish();
-
+    bool x = false;
+    if(query.next()){
+        if(query.value(0).toInt()!=0){
+            x=true;
+        }
+    }
     return x;
 }
 
@@ -431,8 +424,6 @@ void SQLiteFunt::AppendBTask( TBItem tbItem ){
     }
 
     query.finish();
-
-    return;
 }
 
 

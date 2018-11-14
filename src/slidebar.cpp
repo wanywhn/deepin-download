@@ -112,6 +112,7 @@ void SlideBar::addSlideItem( SlideItem *item )
 
 void SlideBar::SetSelectRow( int row )
 {
+    //TODO chang the row should update UI immediately
     setCurrentRow( row );
 }
 

@@ -52,9 +52,8 @@
 #include "dwidgetutil.h"
 #include "constvalue.h"
 
-#define  SLEEPSS          2000
-#define  TDSTATUS         6
-#define  TDGID            5
+#define  SPEED_HIGH          2000
+#define  SPEED_LOW         4000
 
 MainWindow::MainWindow(DMainWindow *parent) :DMainWindow( parent){
 
@@ -105,8 +104,8 @@ void MainWindow::initMainWindow(){
     DThemeManager::instance()->setTheme("light");
     installEventFilter(this);
 
-    layoutWidget = new QWidget();    
-    QVBoxLayout *mainlayout = new QVBoxLayout( layoutWidget );
+    layoutWidget = new QWidget();
+    auto *mainlayout = new QVBoxLayout( layoutWidget );
     mainlayout->setContentsMargins(0, 0, 0, 10);
 
     layout = new QHBoxLayout();
@@ -124,7 +123,7 @@ void MainWindow::initMainWindow(){
     toolbar = new ToolBar();          //工具栏
     this->titlebar()->setCustomWidget(toolbar, Qt::AlignVCenter, false);
 
-    QHBoxLayout *bottomlayout = new QHBoxLayout;  // 底部栏
+    auto *bottomlayout = new QHBoxLayout;  // 底部栏
     bottomlabel = new QLabel;
     bottomlayout->addStretch();
     bottomlayout->addWidget( bottomlabel );
@@ -190,7 +189,8 @@ void MainWindow::initMainWindow(){
     threadTimer = new QTimer;
     QObject::connect( threadTimer, SIGNAL(timeout()), workThread, SLOT( work() ),Qt::AutoConnection );
 
-    threadTimer->start( SLEEPSS );
+    threadTimer->start( SPEED_HIGH );
+    QObject::connect(qGuiApp,&QGuiApplication::applicationStateChanged,this,&MainWindow::OnApplicationStateChanged);
 
     /**
      * 开启 全部任务状态刷新    
@@ -309,7 +309,7 @@ void MainWindow::closeEvent(QCloseEvent *event){
     }
 
     //有提示....
-    CloseWindowMsgBox *closewindowBox = new CloseWindowMsgBox( this );
+    auto *closewindowBox = new CloseWindowMsgBox( this );
     int index = closewindowBox->exec();
     if( index == 1 ){
 
@@ -427,7 +427,7 @@ void MainWindow::SelToolItem( int btn ){
             break;
 
         case 7:  //搜索
-            if( toolbar->toolsG != NULL && toolbar->searchedit != NULL){
+            if( toolbar->toolsG != nullptr && toolbar->searchedit != nullptr){
 
                 toolbar->toolsG->setVisible( false );
                 toolbar->searchedit->setVisible( true );                
@@ -437,12 +437,14 @@ void MainWindow::SelToolItem( int btn ){
         default:
             break;
     }
+    QTimer::singleShot(0,workThread,&GCThread::work);
 }
 
 void MainWindow::SelSlideItem( int row ){
 
     //wThread->setFunction( 0 );
     this->downListView->ClearAllItem();
+    this->gid2RowIndexHash.clear();
 
     //workThread->moveToThread( thread );
     if( threadTimer != nullptr && threadTimer->isActive() ){
@@ -476,23 +478,23 @@ void MainWindow::SelSlideItem( int row ){
     case 0:
 
         workThread->SetControl( 0 );
-        threadTimer->start( SLEEPSS );
+        threadTimer->start( SPEED_HIGH );
         break;
 
     case 1:   //下载中
 
         workThread->SetControl( 1 );
-        threadTimer->start( SLEEPSS );
+        threadTimer->start( SPEED_HIGH );
         break;
     case 2:   //队列中
 
         workThread->SetControl( 2 );
-        threadTimer->start( SLEEPSS );
+        threadTimer->start( SPEED_HIGH );
         break;
     case 3:   //已完成
 
         workThread->SetControl( 3 );
-        threadTimer->start( SLEEPSS );
+        threadTimer->start( SPEED_HIGH );
         break;
 
     //case 4:   // 历史记录
@@ -510,6 +512,9 @@ void MainWindow::SelSlideItem( int row ){
         //m_All->start();
         break;
     }
+
+
+    QTimer::singleShot(0,workThread,&GCThread::work);
 
     if( 4 != row ){
 
@@ -787,6 +792,7 @@ void MainWindow::LoadTableView( QWidget *centerWidget ){
                 RightTMenu( action->data().toInt() );
                 break;
           }
+        QTimer::singleShot(0,workThread,&GCThread::work);
 
     });
 
@@ -845,7 +851,7 @@ void MainWindow::AgainDown(){
 
         QString gid = index.sibling( index.row() , TDGID ).data().toString();
 
-        if ( gid == ""  ) continue;
+        if ( gid.isEmpty()  ) continue;
 
         int classI =  downDB->GetDTaskInfo( gid ).classn;
         QString url = downDB->GetDownUrlPath( gid );
@@ -876,52 +882,52 @@ void MainWindow::CopyUrlToBoard(){
     foreach( const QModelIndex & index, selected){
 
         QString gid = index.sibling( index.row() , TDGID ).data().toString();
-        if ( gid != ""  ){
+        if(gid.isEmpty()){
+            //ShowMessageTip( "Failed to get the original address, the download record may have been deleted artificially" );
+            /**
+            if( errorbox == NULL){
+
+                errorbox = new GCMessageBox( this , "" ,tr("Target file removed or location changed") );
+                errorbox->exec();
+            }
+            **/
+            continue;
+        }
 
             QString URL = downDB->GetDownUrlPath( gid );
-            if( URL == "" ){
+            if( URL.isEmpty() ) {
+                //Failed to get origin url
+                continue;
 
-                //ShowMessageTip( "Failed to get the original address, the download record may have been deleted artificially" );
-                /**
-                if( errorbox == NULL){
-
-                    errorbox = new GCMessageBox( this , "" ,tr("Target file removed or location changed") );
-                    errorbox->exec();
-                }
-                **/
-
-            }else{
-              ShowMessageTip( URL );
-              board->setText(  URL );
             }
-        }
+
+              ShowMessageTip( URL );
+              board->setText(board->text()+"\n"+URL);
     }
 }
 
 void MainWindow::OpenDownFile(){
 
-    GCMessageBox *errorbox;
+
     const QModelIndexList selected = downListView->selectionModel()->selectedRows();
     foreach( const QModelIndex & index, selected){
 
-        QString gid = index.sibling( index.row() , TDGID ).data().toString();
-        if ( gid != ""  ){
-
-            QString SavePath = downDB->GetDownSavePath( gid );
-            //ShowMessageTip( SavePath );
-            QFileInfo spathInfo( SavePath );
+            //TODO when delete ,savepath disappear
+        QString filePath= index.sibling( index.row() , COLUMN_INDEX_SAVEPATH).data().toString();
+        if(filePath.isEmpty()){
+    auto                errorbox = new GCMessageBox( this , tr("Operation failed！") ,tr("Target file removed or location changed") );
+                    errorbox->show();
+                    return ;
+                }
+            QFileInfo spathInfo( filePath);
             if( spathInfo.isFile() ){
-                OpenDownFilePath( SavePath );
+                OpenDownFilePath( filePath);
             }else{
                 //ShowMessageTip( "File " + SavePath + " No, it may have been deleted." );
-                if( errorbox ==  NULL ){
-
-                    errorbox = new GCMessageBox( this , tr("Operation failed！") ,tr("Target file removed or location changed") );
+                    auto errorbox = new GCMessageBox( this , tr("Operation failed！") ,tr("Target file removed or location changed") );
                     errorbox->show();
                 }
             }
-        }
-    }
 }
 
 void MainWindow::RemoveAria2Cache(){
@@ -970,15 +976,15 @@ void MainWindow::DeleteAllRecord(){
     }
 
     //QList<DDRecord> t = this->downDB->ReadRecycleList();
-    GCMessageBox *errorbox;
+    GCMessageBox *errorbox=nullptr;
     int errorCount = 0;
-    for( int i = 0 ; i < t.size() ; i++ ){
+    for (const auto &item : t) {
 
-        QString filePath =  t.at(i).savepath;
+        QString filePath = item.savepath;
 
         if ( ! QFile::remove( filePath ) ){
 
-            if( errorbox == NULL){
+            if( errorbox == nullptr){
 
                 QFileInfo dfile( filePath );
                 if ( dfile.isFile() ){
@@ -999,48 +1005,50 @@ void MainWindow::DeleteAllRecord(){
         }else{
 
             //同时删除记录
-            //downDB->DeleteDTask( t.at(i).gid );
+            //downDB->DeleteDTask( t.at(item).gid );
         }
 
             /**
              *  无论文件是否同步删除成功，都删除记录
              */
-            downDB->DeleteDTask( t.at(i).gid );
+            downDB->DeleteDTask(item.gid );
     }
 
     RecycleList();
 
 }
 
+//TODO shenmeyisi
 /**
 * 删除历史记录
 */
 void MainWindow::DeleteDownFileDB(){
 
-    GCMessageBox *errorbox;
+    GCMessageBox *errorbox=nullptr;
     int errorCount = 0;
     const QModelIndexList selected = downListView->selectionModel()->selectedRows();
     foreach( const QModelIndex & index, selected){
 
-        QString gid = index.sibling( index.row() , TDGID ).data().toString();
-        if ( gid != ""  ){
+        auto savePath=index.sibling(index.row(),COLUMN_INDEX_SAVEPATH).data().toString();
+        if(savePath.isEmpty()){
+            errorbox=new GCMessageBox(this,tr("Operation failed!"),tr("Target file path couldn't find"));
+            errorbox->show();
+            return ;
+        }
 
-            QString filePath = downDB->GetDownSavePath( gid );
-
-            if ( ! QFile::remove( filePath ) ){
+            if ( ! QFile::remove( savePath) ){
 
                 //ShowMessageTip( filePath + " File deletion failure" );
-                if( errorbox == NULL){
+                if( errorbox == nullptr){
 
-
-                    QFileInfo dfile( filePath );
+                    QFileInfo dfile( savePath);
                     if ( dfile.isFile() ){
 
                         errorbox = new GCMessageBox( this ,tr("Operation failed！") , tr("Target file removed or location changed") );
                         errorbox->show();
                     }else{
 
-                        errorbox = new GCMessageBox( this ,tr("Failed to delete") , tr("You do not have permission to delete %1").arg(filePath ) );
+                        errorbox = new GCMessageBox( this ,tr("Failed to delete") , tr("You do not have permission to delete %1").arg(savePath) );
                         errorbox->show();
                     }
 
@@ -1050,9 +1058,9 @@ void MainWindow::DeleteDownFileDB(){
                 }
 
             }
+        QString gid = index.sibling( index.row() , TDGID ).data().toString();
             downDB->DeleteDTask( gid );
         }
-   }
 
    GetDDList();
 }
@@ -1064,13 +1072,20 @@ void MainWindow::Remove(){
     foreach( const QModelIndex & index, selected){
         QString gid = index.sibling( index.row() , TDGID ).data().toString();
         //QString status = index.sibling( index.row() , TDSTATUS ).data().toString();
-        if ( gid != ""  ){
+        if(gid.isEmpty()){
+
+            qDebug()<<"row: "+QString::number(index.row())<<" don't have gid";
+            return ;
+        }
 
             aria2c->SendMsgAria2c_pause( gid );
             aria2c->SendMsgAria2c_remove( gid );
+
+            gid2RowIndexHash.remove(gid);
+
             DDRecord d;
             d.gid  = gid;
-            d.type =  3;   //3 移除
+            d.type =TaskStatus::Deleted;   //3 移除
             qDebug() << "Remove :" << gid;
             downDB->SetDTaskStatus( d );
 
@@ -1085,7 +1100,6 @@ void MainWindow::Remove(){
                 downListView->m_dataModel->removeRow( index.row() );
             }
 
-        }
     }
 }
 
@@ -1276,6 +1290,10 @@ void MainWindow::AppendDownBT( QString btfilepath ,QString SavePath  ){
     }
 
     QString ID = downDB->AppendDTask(  btfilepath ,"2" ); //添加数据库记录
+   if(ID==ALREADY_IN_DOWNLOADING){
+   //TODO if already in downloading,just skip it ?
+       return;
+   }
     aria2c->SendMsgAria2c_addTorrent( btfilepath ,ID  );
     //新建任务开始下载不需要系统通知
     //2018-1-2 ShowMessageTip( "Enable：" + btfilepath  );
@@ -1290,6 +1308,10 @@ void MainWindow::AppendDownMetalink( QString Metalinkfilepath ,QString SavePath 
     }
 
     QString ID = downDB->AppendDTask(  Metalinkfilepath ,"3" ); //添加数据库记录
+   if(ID==ALREADY_IN_DOWNLOADING){
+   //TODO if already in downloading,just skip it ?
+       return;
+   }
     aria2c->SendMsgAria2c_addMetalink( Metalinkfilepath ,ID );
     //2018-1-2 新建任务开始下载不需要系统通知
     //ShowMessageTip( "Enable： " + Metalinkfilepath  );
@@ -1352,11 +1374,12 @@ void MainWindow::OpenLinkFile( QString filename ){
 /** ***
  *  aria2c 获取到的状态信息刷新到 MWM
  */
+
 void MainWindow::UpdateGUI_StatusMsg( TBItem tbitem ){
 
     qDebug() << "*********** UpdateGUI_StatusMsg : " << tbitem.uri << tbitem.Progress << " ********** " ;
 
-    downDB->SetDownSavePath( tbitem.gid ,tbitem.savepath );
+//    downDB->SetDownSavePath( tbitem.gid ,tbitem.savepath );
 
     /** 更新进度到浮窗 */
     //UpdateMWM( tbitem.Progress );
@@ -1366,26 +1389,27 @@ void MainWindow::UpdateGUI_StatusMsg( TBItem tbitem ){
         /** 记录下此时 listView 中已选择的行 */
         const QModelIndexList selected = downListView->selectionModel()->selectedRows();
 
-        bool findN = false;
-        for( int i = 0 ; i < downListView->m_dataModel->rowCount();i++ ){
+        updateOrInsertIntoDownListView(&tbitem);
+//        bool findN = false;
+//        for( int i = 0 ; i < downListView->m_dataModel->rowCount();i++ ){
 
             //qDebug()<< downListView->m_dataModel->index(i,0).data().toString();
 
-            QString gid =  downListView->m_dataModel->index(i, TDGID ).data().toString();
+//            QString gid =  downListView->m_dataModel->index(i, TDGID ).data().toString();
 
-            if ( gid == tbitem.gid  ){
+//            if ( gid == tbitem.gid  ){
 
-                downListView->SetItemData( i ,tbitem );
-                findN = true;
-                break;
-            }
+//                downListView->SetItemData( i ,tbitem );
+//                findN = true;
+//                break;
+//            }
 
-        }
+//        }
 
-        if( ! findN ){
-
-            downListView->InsertItem( downListView->m_dataModel->rowCount() ,tbitem );
-        }
+//        if( ! findN ){
+//
+//            downListView->InsertItem( downListView->m_dataModel->rowCount() ,tbitem );
+//        }
 
         /**
          * 恢复此前 listView 已选择行的高亮
@@ -1401,13 +1425,13 @@ void MainWindow::UpdateGUI_StatusMsg( TBItem tbitem ){
 
     /** 在数据库表中记录 已完成的任务 */
     if ( tbitem.State == "complete" ){
-        int dbt_Type = downDB->GetDTaskInfo( tbitem.gid ).type;
+        auto dbt_Type = downDB->GetDTaskInfo( tbitem.gid ).type;
         /** 3人为标记为删除*/
-        if ( dbt_Type != 4 && dbt_Type != 3 ){
+        if ( dbt_Type != TaskStatus::Finished && dbt_Type != TaskStatus::Deleted ){
 
            DDRecord t;
            t.gid = tbitem.gid;
-           t.type = 4 ;   //4 标注已完成
+           t.type = TaskStatus::Finished ;   //4 标注已完成
            downDB->SetDTaskStatus( t );
            //%1 has been downloaded successfully
            ShowMessageTip( tr("%1 has been downloaded successfully").arg( tbitem.uri )  );
@@ -1427,10 +1451,10 @@ void MainWindow::OnNetworkReplyNode( TBItem* tbitem ){
     //qDebug() << "*********** UpdateGUI_StatusMsg : " << tbitem.uri << tbitem.Progress << " ********** " ;
     //downDB->SetDownSavePath( tbitem->gid ,tbitem->savepath );
     /** 频繁 SQLite UPDATE 记录疑似引起主线程卡顿 */
-    if ( downDB->GetDownSavePath( tbitem->gid ) == ""  ){
-
-        downDB->SetDownSavePath( tbitem->gid ,tbitem->savepath );
-    }
+    //TODO will not change savePath in db since change savePath hasn't benn implemented
+//    if ( downDB->GetDownSavePath( tbitem->gid ) == ""  ){
+//        downDB->SetDownSavePath( tbitem->gid ,tbitem->savepath );
+//    }
 
     /** 更新进度到浮窗 */
     //UpdateMWM( tbitem.Progress );
@@ -1440,37 +1464,7 @@ void MainWindow::OnNetworkReplyNode( TBItem* tbitem ){
         /** 记录下此时 listView 中已选择的行 */
         const QModelIndexList selected = downListView->selectionModel()->selectedRows();
 
-        bool findN = false;
-        for( int i = 0 ; i < downListView->m_dataModel->rowCount();i++ ){
-
-            //qDebug()<< downListView->m_dataModel->index(i,0).data().toString();
-
-            QString gid =  downListView->m_dataModel->index(i, TDGID ).data().toString();
-
-            /**
-             * 移除掉已经被标记删除的
-
-             */
-            int Dtype = downDB->GetDTaskInfo( gid ).type;
-            if( Dtype == 3 ){
-
-                //downListView->m_dataModel->removeRow( i );
-                continue;
-            }
-
-            if ( gid == tbitem->gid  ){
-
-                downListView->SetItemData( i ,*tbitem );
-                findN = true;
-                break;
-            }
-
-        }
-
-        if( ! findN ){
-
-            downListView->InsertItem( downListView->m_dataModel->rowCount() ,*tbitem );
-        }
+        updateOrInsertIntoDownListView(tbitem);
 
         /**
          * 恢复此前 listView 已选择行的高亮
@@ -1486,13 +1480,13 @@ void MainWindow::OnNetworkReplyNode( TBItem* tbitem ){
 
     /** 在数据库表中记录 已完成的任务 */
     if ( tbitem->State == "complete" ){
-        int dbt_Type = downDB->GetDTaskInfo( tbitem->gid ).type;
+        auto dbt_Type = downDB->GetDTaskInfo( tbitem->gid ).type;
         /** 3人为标记为删除*/
-        if ( dbt_Type != 4 && dbt_Type != 3 ){
+        if ( dbt_Type != TaskStatus::Finished && dbt_Type != TaskStatus::Deleted ){
 
            DDRecord t;
            t.gid = tbitem->gid;
-           t.type = 4 ;   //4 标注已完成
+           t.type = TaskStatus::Finished ;   //4 标注已完成
            downDB->SetDTaskStatus( t );
            //%1 has been downloaded successfully
            ShowMessageTip( tr("%1 has been downloaded successfully").arg( tbitem->uri )  );
@@ -1501,6 +1495,20 @@ void MainWindow::OnNetworkReplyNode( TBItem* tbitem ){
 
 
 
+}
+
+/**
+ * 在ListView中更新或者插入新项目
+ * @param tbitem
+ */
+void MainWindow::updateOrInsertIntoDownListView(const TBItem *tbitem) {
+    if(!gid2RowIndexHash.contains(tbitem->gid)){
+            gid2RowIndexHash.insert(tbitem->gid, downListView->m_dataModel->rowCount());
+            downListView->InsertItem(downListView->m_dataModel->rowCount() , *tbitem );
+            downDB->SetDownSavePath(tbitem->gid , tbitem->savepath );
+        }else{
+            downListView->SetItemData(gid2RowIndexHash.value(tbitem->gid), *tbitem);
+        }
 }
 
 /**
@@ -1520,47 +1528,53 @@ void MainWindow::OnNetworkReply( QList<TBItem*> *tbList ){
     const QModelIndexList selected = downListView->selectionModel()->selectedRows();
 
     /** 频繁 清空再重填 疑引起卡顿 */
-    downListView->ClearAllItem();
+//    downListView->ClearAllItem();
 
     int acount = 0;
     int zcount = 0;
-    for( int i = 0 ; i < tbList->size() ; i++  ){
+    for (auto item : *tbList) {
 
         /** 过滤掉不能下载的 */
-        if( tbList->at(i)->savepath == "" ){
+        if(item->savepath == "" ){
              continue;
         }
 
         /** 过滤掉出错和已移除的 */
-        if(  tbList->at(i)->State == "error" || tbList->at(i)->State == "removed"   ){
+        if(item->State == "error" || item->State == "removed"   ){
              continue;
         }
 
         /** 过滤掉已经被标记删除的 */
-        int Dtype = downDB->GetDTaskInfo( tbList->at(i)->gid ).type;
-        if( Dtype == 3 ){
+        auto Dtype = downDB->GetDTaskInfo(item->gid ).type;
+        if( Dtype == TaskStatus::Deleted ){
              continue;
         }
 
-        /** 频繁 清空再重填 疑引起卡顿 */
-        downListView->InsertItem( downListView->m_dataModel->rowCount(),*tbList->at(i) );
+//        /** 频繁 清空再重填 疑引起卡顿 */
+        updateOrInsertIntoDownListView(item);
+//        if(!gid2RowIndexHash.contains(item->gid)){
+//            gid2RowIndexHash.insert(item->gid,downListView->m_dataModel->rowCount());
+//            downListView->InsertItem( downListView->m_dataModel->rowCount(),*item);
+//            downDB->SetDownSavePath(item->gid , item->savepath );
+//        }else{
+//            downListView->SetItemData(gid2RowIndexHash[item->gid],*item);
+//        }
 
 
-        //mwm->UpdateMWM(  tbList.at(i).Progress );
-        /** 频繁 SQLite UPDATE 记录疑似引起主线程卡顿 */
-        //downDB->SetDownSavePath( tbList->at(i)->gid ,tbList->at(i)->savepath );
-        /**
-         * 2018-01-03 修
-         * 加判断 ，SELECT 消耗远小于 UPDATE
-         */
-        if ( downDB->GetDownSavePath( tbList->at(i)->gid ) == "" ){
+        //mwm->UpdateMWM(  tbList.at(item).Progress );
+//        /** 频繁 SQLite UPDATE 记录疑似引起主线程卡顿 */
+        //downDB->SetDownSavePath( tbList->at(item)->gid ,tbList->at(item)->savepath );
+//        /**
+//         * 2018-01-03 修
+//         * 加判断 ，SELECT 消耗远小于 UPDATE
+//         */
+//        if ( downDB->GetDownSavePath( tbList->at(item)->gid ) == "" ){
+//            downDB->SetDownSavePath( tbList->at(item)->gid ,tbList->at(item)->savepath );
+//        }
 
-            downDB->SetDownSavePath( tbList->at(i)->gid ,tbList->at(i)->savepath );
-        }
+        downDB->AppendBTask( *item);
 
-        downDB->AppendBTask( *tbList->at(i) );
-
-        if( tbList->at(i)->State == "active" ){
+        if(item->State == "active" ){
 
             acount++;
         }
@@ -1607,38 +1621,39 @@ void MainWindow::UpdateGUI_StatusMsg(  QList<TBItem>  tbList ){
     /** 记录下此时 listView 中已选择的行 */
     const QModelIndexList selected = downListView->selectionModel()->selectedRows();
 
-    downListView->ClearAllItem();
+//    downListView->ClearAllItem();
 
     int acount = 0;
     int zcount = 0;
-    for( int i = 0 ; i < tbList.size() ; i++  ){
+    for (const auto &item : tbList) {
 
 
         /** 过滤掉不能下载的 */
-        if( tbList.at(i).savepath == "" ){
+        if(item.savepath.isEmpty()){
              continue;
         }
 
         /** 过滤掉出错和已移除的 */
-        if(  tbList.at(i).State == "error" || tbList.at(i).State == "removed"   ){
+        if(item.State == "error" || item.State == "removed"   ){
              continue;
         }
 
         /** 过滤掉已经被标记删除的 */
-        int Dtype = downDB->GetDTaskInfo( tbList.at(i).gid ).type;
-        if( Dtype == 3 ){
+        auto Dtype = downDB->GetDTaskInfo(item.gid ).type;
+        if( Dtype == TaskStatus::Deleted){
              continue;
         }
 
+//        downListView->InsertItem( downListView->m_dataModel->rowCount(), item);
 
-        downListView->InsertItem( downListView->m_dataModel->rowCount(),tbList.at(i) );
+        //!!
+        updateOrInsertIntoDownListView(&item);
+        //mwm->UpdateMWM(  tbList.at(item).Progress );
+//        downDB->SetDownSavePath(item.gid , item.savepath );
 
-        //mwm->UpdateMWM(  tbList.at(i).Progress );
-        downDB->SetDownSavePath( tbList.at(i).gid ,tbList.at(i).savepath );
+        downDB->AppendBTask(item);
 
-        downDB->AppendBTask( tbList.at(i) );
-
-        if( tbList.at(i).State == "active" ){
+        if(item.State == "active" ){
 
             acount++;
         }
@@ -1692,6 +1707,8 @@ void MainWindow::RecycleList(){
 
     downListView->ClearAllItem();
 
+    gid2RowIndexHash.clear();
+
     QList<DDRecord> t = this->downDB->ReadRecycleList();
 
     for( int i = 0 ; i < t.size() ; i++ ){
@@ -1702,7 +1719,9 @@ void MainWindow::RecycleList(){
         x.gid  = t.at(i).gid;
         x.Progress = "0";
         x.State = tr( "Deleted" ); //已删除
+        x.savepath=t.at(i).savepath;
         this->downListView->InsertItem( i,x );
+        gid2RowIndexHash.insert(x.gid,i);
     }
 
 }
@@ -1777,7 +1796,7 @@ void MainWindow::ShowMessageTip( QString text ){
    notifyActivator( "", text );
 }
 
-void MainWindow::OPenDownUrlDlg( QString DownFileUrl ){
+void MainWindow::OpenDownUrlDlg(QString DownFileUrl){
 
     if ( DownFileUrl != "" ){
 
@@ -2327,6 +2346,34 @@ void MainWindow::notifyActivator( QString title ,QString text )
 void MainWindow::slotActionInvoked(uint id, QString action )
 {
     Q_EMIT show();
+}
+
+void MainWindow::OnApplicationStateChanged(Qt::ApplicationState state) {
+    switch(state){
+        case Qt::ApplicationState::ApplicationActive:{
+            threadTimer->start(SPEED_HIGH);
+            qDebug()<<"SPEED HIGH";
+            break;
+        }
+        case Qt::ApplicationState::ApplicationInactive:{
+            threadTimer->start(SPEED_LOW);
+            qDebug()<<"SPEED LOW";
+
+            break;
+        }
+        //TODO 似乎需要操作系统的支持
+        case Qt::ApplicationState::ApplicationHidden:
+        case Qt::ApplicationState::ApplicationSuspended:{
+            if(threadTimer->isActive()){
+                threadTimer->stop();
+                qDebug()<<"background sleep";
+            }
+        break;
+
+        }
+
+    }
+
 }
 
 

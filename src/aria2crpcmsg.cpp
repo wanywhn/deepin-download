@@ -2207,9 +2207,9 @@ void Aria2cRPCMsg::Aria2cRMsg_tellMessage( QJsonObject nObj ){
 
         QJsonArray  resultList = nObj.value("result").toArray();
 
-        for(int i = 0; i < resultList.size(); i++) {
+        for (auto &&item : resultList) {
 
-             QJsonObject result = resultList.at(i).toObject();
+             QJsonObject result = item.toObject();
 
              TBItem tbitem;
 /**
@@ -2221,9 +2221,9 @@ void Aria2cRPCMsg::Aria2cRMsg_tellMessage( QJsonObject nObj ){
 **/
              QJsonArray  files = result.value("files").toArray();
 
-             for(int j = 0; j < files.size(); j++) {
+             for (auto &&file1 : files) {
 
-                 QJsonObject file = files.at(j).toObject();
+                 QJsonObject file = file1.toObject();
 /**
                  qDebug() << "completedLength" << file.value( "completedLength" ).toString();
                  qDebug() << "index" <<  file.value( "index" ).toString();
@@ -2234,16 +2234,17 @@ void Aria2cRPCMsg::Aria2cRMsg_tellMessage( QJsonObject nObj ){
                  tbitem.savepath = file.value( "path" ).toString();
 
                  QJsonArray  uris = file.value("uris").toArray();
-                 for(int k = 0; k < uris.size(); k++ ) {
-                     QJsonObject uri = uris.at(k).toObject();
+                 for (auto &&uris1 : uris) {
+                     QJsonObject uri = uris1.toObject();
 /**
                      qDebug() <<  "status" << uri.value( "status" ).toString();
                      qDebug() <<  "uri" << uri.value( "uri" ).toString();
 **/
+//TODO uri should be array
                      tbitem.uri = uri.value( "uri" ).toString();
                  }
 
-                 if ( uris.size() == 0 ){
+                 if (uris.empty()){
 
                      tbitem.uri = tbitem.savepath;
                  }

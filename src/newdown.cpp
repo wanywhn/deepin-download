@@ -292,14 +292,11 @@ int NewDown::Button2Click(){
                continue;
            }
 
-               if ( existUrl( url.trimmed() ) ){
-
-                   mainUI->AppendDownUrl( url ,this->SavePath );
-               }else{
-
+           if ( !existUrl( url.trimmed() ) ){
                    this->errormsg->setText( tr("The address cannot be analyzed, please retry!") );
                    return -1;
            }
+           mainUI->AppendDownUrl( url ,this->SavePath );
        }
    }
    this->editorUrl->setText("");

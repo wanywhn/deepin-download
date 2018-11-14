@@ -42,7 +42,7 @@ signals:
    void NetworkReply( QList<TBItem*> *tbList );
    void NetworkReplyNode( TBItem* tbItem );
 
-private slots:
+public slots:
    void work();
 
 };

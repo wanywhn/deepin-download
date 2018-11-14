@@ -120,7 +120,7 @@ void GCThread::SendMessage( QString jsonrpc ,QString id ,QString method, QJsonAr
 
     qDebug() << "======================= SendMessage === "+ method +" =================================== ";
 
-    QNetworkAccessManager *manager = new QNetworkAccessManager;
+    auto *manager = new QNetworkAccessManager;
 
     QJsonObject obj;
 
@@ -194,6 +194,7 @@ void GCThread::GCNetworkReply( QNetworkReply* reply,const QString method ){
 }
 
 
+//TODO code duplicated
 //"aria2.tellStatus"
 void GCThread::Aria2cRMsg_tellStatus( QJsonObject nObj ){
 
@@ -251,6 +252,7 @@ void GCThread::Aria2cRMsg_tellStatus( QJsonObject nObj ){
             QJsonArray uris = file.value("uris").toArray();
             for( int j = 0 ; j < uris.size() ; j++ ){
 
+                //TODO uri should be String List
                 QJsonObject uri = uris.at(j).toObject();
                 tbitem->uri = uri.value("uri").toString();
 

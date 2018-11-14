@@ -384,6 +384,7 @@ void DownListView::SetItemData( int row ,TBItem tbitem  ){
 
     SetItemData( row, 7,  tbitem.dtime );
     SetItemData( row, 8,  tbitem.Progress );
+    SetItemData(row,9,tbitem.savepath);
 
     m_dataModel->item( row , 1 )->setTextAlignment(Qt::AlignCenter);
     //m_dataModel->item( row , 2 )->setTextAlignment(Qt::AlignCenter);
@@ -394,6 +395,7 @@ void DownListView::SetItemData( int row ,TBItem tbitem  ){
     this->setColumnHidden( 6,true );
     this->setColumnHidden( 7,true );
     this->setColumnHidden( 8,true );
+    this->setColumnHidden(9,true);
 
     //this->setRowHeight( row, 25   );
     this->horizontalScrollBar()->setVisible( false );

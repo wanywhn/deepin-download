@@ -1,6 +1,7 @@
 #ifndef DOWNRECORD_H
 #define DOWNRECORD_H
 #include <QString>
+#include "constvalue.h"
 
 
 /**
@@ -26,7 +27,7 @@ struct DDRecord {
     int id;
     QString url;
     QString gid;
-    int type;
+    TaskStatus type;
     int classn;
     QString dtime;      // dtime
     QString savepath;

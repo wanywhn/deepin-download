@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 
     window.ShowMW();
     if(!fileURL.isEmpty()){
-        window.OPenDownUrlDlg(fileURL);
+        window.OpenDownUrlDlg(fileURL);
     }
 
     /**
